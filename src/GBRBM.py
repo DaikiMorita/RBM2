@@ -4,7 +4,7 @@ import numpy as np
 import numpy.random as nr
 import warnings
 import time
-from numba import jit
+import os
 
 
 class GaussianBernoulliRBM(object):
@@ -70,6 +70,12 @@ class GaussianBernoulliRBM(object):
         # this method below will transform the array into 3-d numpy array
         mini_batch = make_mini_batch(train_data, mini_batch_size)
 
+        len_mini_batch = mini_batch.shape[0]
+
+        save_mini_batch_for_low_memory(mini_batch, "MB")
+
+        del mini_batch
+
         learning_params = {"sampling_type": sampling_type,
                            "sampling_times": sampling_times,
                            "learning_rate": learning_rate,
@@ -86,7 +92,11 @@ class GaussianBernoulliRBM(object):
         # ENTRY of Contrastive Divergence Learning
         for e in tqdm.tqdm(range(0, max_epoch)):
             # Gibbs Sampling
-            X = np.array(mini_batch[int(e % len(mini_batch))])
+
+            # X = np.array(mini_batch[int(e % len(mini_batch))])
+
+            X = numpy_array_load(os.path.join("MB", str(e % len_mini_batch)))
+
             X_k = gibbs_sampling(X, X_k, W, B, C, Sigma,
                                  learning_params["sampling_type"],
                                  learning_params["sampling_times"])
@@ -148,27 +158,56 @@ class GaussianBernoulliRBM(object):
 
 def make_mini_batch(data, mini_batch_size):
     """
-    makes mini bathes from list-type data_array
-    :param data: 2-d list
-    :param mini_batch_size: size of mini batches
-    :return:3d-list. A returned list will contain mini batches.
-    Each batch will contain lists as you specified at the parameter.
+    makes mini batch from 2-d numpy array
+    :param data: 2-d numpy array
+    :param mini_batch_size:
+    :return: 3-d numpy array (total num of mini_batch * mini_batch_size, original_data_column)
+    """
+    r, c = data.shape
+
+    rest = r % mini_batch_size
+
+    round_data, rest_data = np.split(data, [r - rest])
+
+    round_data.reshape((int(round_data.shape[0] / mini_batch_size), mini_batch_size, c))
+
+    rest_data = np.vstack([rest_data, data[0:int(mini_batch_size - rest)]])
+
+    data = np.vstack([round_data, rest_data])
+
+    return data.reshape((int(data.shape[0] / mini_batch_size), mini_batch_size, c))
+
+
+def save_mini_batch_for_low_memory(mini_batch, path):
     """
 
-    # Now that data_array was shuffled,
-    # mini batches will contain data with a different label at the almost same rate, statistically,
-    # even when mini batches are made by extracting data from the top of the list 'data_array'
+    :param mini_batch:
+    :param path:
+    :return:
+    """
 
-    data_array_length = len(data)
-    rest = data_array_length % mini_batch_size
+    for i, m_b in enumerate(mini_batch):
+        numpy_array_save(os.path.join(path, str(i)), m_b)
 
-    mini_batches = [data[i:i + mini_batch_size] for i in
-                    range(0, data_array_length - rest, mini_batch_size)]
 
-    rest_batch = data[data_array_length - rest:] + data[0:mini_batch_size - rest]
-    mini_batches.append(rest_batch)
+def numpy_array_save(filename, array):
+    """
+    Saves numpy array into a directory.
+    :param filename: filename
+    :param array: array to be saved
+    :return: None
+    """
 
-    return np.array(mini_batches)
+    np.save('%s.npy' % filename, array)
+
+
+def numpy_array_load(filename):
+    """
+
+    :param filename:
+    :return:
+    """
+    return np.load(filename)
 
 
 def gradient_update(X, X_k, W, B, C, Sigma, delta_W, delta_B, delta_C, delta_Sigma, rho, learning_params):

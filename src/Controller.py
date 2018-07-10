@@ -44,8 +44,8 @@ class Controller(object):
         # dir name for saving result
         self.dir_for_saving_result = os.path.join('Result', dt.now().strftime('%Y-%m-%d-%H-%M-%S'))
 
-        path_image_to_get_size = ini_file.get('Setting', 'path_image_to_get_size')
-        self.width, self.height = self.exfile_manager.get_image_width_height(path_image_to_get_size)
+        self.width = 0
+        self.height = 0
 
     def start_main_process(self):
         """
@@ -83,7 +83,7 @@ class Controller(object):
         # 4. Contrastive Divergence Learning #
         ######################################
 
-        C, B, W, sigma = self.CD_learning(data_train)
+        C, B, W, sigma, W_learn_process = self.CD_learning(data_train)
 
         ####################
         # 5. Saves results #
@@ -141,7 +141,11 @@ class Controller(object):
         # num_all_data: float scalar, total amount of data
         # all_data_array: 2-d list (dim: num_all_data * each data dimension)
         # each_label_data_array: 3-d list (dim: num_label*num_all_data * each data dimension)
-        formatted_labels, formatted_data, each_label_data = self.exfile_manager.read_image_data(path_train_dirs)
+        formatted_labels, formatted_data, each_label_data, width, height = self.exfile_manager.read_image_data(
+            path_train_dirs)
+
+        self.width = width
+        self.height = height
 
         self.viewer.display_message("\nData Read Finished...\n")
 
@@ -181,8 +185,6 @@ class Controller(object):
 
         epoch = int(ini_file.get('GeneralParameter', 'Epoch'))
 
-        num_visible_units = self.width * self.height
-        print(num_visible_units)
         num_hidden_units = int(ini_file.get('GeneralParameter', 'Num_Hidden_Unit'))
         learning_rate = float(ini_file.get('GeneralParameter', 'Learning_Rate'))
 
@@ -199,44 +201,33 @@ class Controller(object):
         ############
         # momentum #
         ############
-        if ''.join(ini_file['SpecialParameter']['Momentum']) == 'Yes':
-            momentum_rate = float(ini_file.get('SpecialParameter', 'Momentum_Rate'))
-        else:
-            momentum_rate = 0
+        momentum_rate = float(ini_file.get('SpecialParameter', 'Momentum_Rate'))
 
         ################
         # weight_decay #
         ################
-        if ''.join(ini_file['SpecialParameter']['Weight_Decay']) == 'Yes':
-            weight_decay_rate = float(ini_file.get('SpecialParameter', 'Weight_Decay_Rate'))
-        else:
-            weight_decay_rate = 0
+        weight_decay_rate = float(ini_file.get('SpecialParameter', 'Weight_Decay_Rate'))
 
         #########################
         # sparse_regularization #
         #########################
-        if ''.join(ini_file['SpecialParameter']['Sparse_Regularization']) == 'Yes':
+        sparse_regularization = (float(ini_file.get('SpecialParameter', 'Sparse_Regularization_Target')),
+                                 float(ini_file.get('SpecialParameter', 'Sparse_Regularization_Rate')))
 
-            sparse_regularization = (float(ini_file.get('SpecialParameter', 'Sparse_Regularization_Target')),
-                                     float(ini_file.get('SpecialParameter', 'Sparse_Regularization_Rate')))
-
-        else:
-            sparse_regularization = (0, 0)
-
-        width_sf = int(ini_file.get('SpecialParameter', 'Width_Spread_Function'))
-        height_sf = int(ini_file.get('SpecialParameter', 'Height_Spread_Function'))
-        num_sf = num_hidden_units
         # CD Learning
         # Will get learned numpy arrays
         start = time.time()
+        num_visible_units = int(data_train[0].shape[0])
 
         gbrbm = GBRBM.GaussianBernoulliRBM(num_visible_units, num_hidden_units)
         gbrbm.learning(data_train, epoch, self.mini_batch_size, sampling_type, sampling_times,
-                       learning_rate=learning_rate, Sigma_fix=True)
+                       learning_rate=learning_rate, sigma_fix=True, weight_decay_rate=weight_decay_rate,
+                       momentum_rate=momentum_rate)
 
         self.viewer.display_message("\nContrastive Divergence Learning Starts...\n")
 
         W, B, C, Sigma = gbrbm.get_model_params()
+        W_during_learning = gbrbm.get_W_during_learning()
 
         # Measures time
         elapsed_time = time.time() - start
@@ -247,7 +238,7 @@ class Controller(object):
             "\nContrastive Divergence Learning Finished...\n" + "About %d h %d m %d s \n" % (h, m, s))
         self.line_ui_manager.send_line("\nCD Learning \nAbout %d h %d m %d s" % (h, m, s))
 
-        return C, B, W, Sigma
+        return C, B, W, Sigma, W_during_learning
 
     def save_result(self, C, B, W, sigma):
         """
@@ -273,7 +264,7 @@ class Controller(object):
             path_to_file = os.path.join(self.dir_for_saving_result, 'W_%d.jpg' % index)
 
             Image.fromarray(
-                np.uint8(np.reshape((W / np.max(W)) * 255, (self.width, self.height)))).save(
+                np.uint8(np.reshape((W / np.max(W)) * 255, (self.height, self.width)))).save(
                 path_to_file)
 
             self.line_ui_manager.send_line('W_%d.jpg' % index, path_to_file)

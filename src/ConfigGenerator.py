@@ -39,9 +39,9 @@ class ConfigGenerator(wx.Frame):
         self.l_textctrl = []
         self.max_n_key = 0
         self.width_run_button = 150
-        self.height_run_button = 100
+        self.height_run_button = 70
         self.width_exit_button = 150
-        self.height_exit_button = 100
+        self.height_exit_button = 70
 
         # Creates a dialog
         width, height = self.design_dialog(self.l_data_frame)
@@ -201,7 +201,8 @@ class ConfigGenerator(wx.Frame):
 
         with open(filename1, mode='w', encoding='utf-8') as fh:
             fh.write('#!/bin/sh\n')
-            fh.write('python src/RBM2.py %s' % filename)
+            #fh.write('python src/RBM2.py %s' % filename)
+            fh.write('python -m cProfile -o RBM2.profile src/RBM2.py %s' % filename)
 
     def get_new_values(self):
 

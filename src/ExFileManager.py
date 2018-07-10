@@ -8,6 +8,7 @@ import numba
 import numpy as np
 from PIL import Image
 from skimage import io
+from PIL import Image
 
 
 class ExFileManager(object):
@@ -34,14 +35,20 @@ class ExFileManager(object):
         all_data = []
         all_labels = []
         each_label_data = []
-
-        for dir in os.listdir(path_all_dirs):
+        width = 0
+        height = 0
+        for i, dir in enumerate(os.listdir(path_all_dirs)):
             num_data, data = self.get_data(os.path.join(path_all_dirs, dir))
             labels = [dir] * num_data
 
             all_labels.append(labels)
             all_data.append(data)
             each_label_data.append([dir, data])
+            if i == 0:
+                path = os.path.join(path_all_dirs, dir)
+                filename = os.listdir(path)[0]
+                path = os.path.join(path, filename)
+                width, height = self.get_image_width_height(path)
 
         # all_data_array above was organized like [[data with label A],[data with label B]....]
         # a format like [data with label A, data with label B,...] is easy to use.
@@ -56,7 +63,7 @@ class ExFileManager(object):
             for datum in data:
                 formatted_data.append(datum)
 
-        return formatted_labels, formatted_data, each_label_data
+        return formatted_labels, formatted_data, each_label_data, width, height
 
     def get_data(self, path_to_data):
         """
@@ -140,3 +147,7 @@ class ExFileManager(object):
 
         with open(filename, mode='a', encoding='utf-8') as fh:
             fh.write('%s\n' % data)
+
+    def save_data_array_as_gif(self, filename, data):
+        data[0].save('data/dst/pillow_imagedraw.gif',
+                     save_all=True, append_images=images[1:], optimize=False, duration=40, loop=0)

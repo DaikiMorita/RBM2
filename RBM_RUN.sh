@@ -1,2 +1,2 @@
 #!/bin/sh
-python src/RBM2.py Config/config.ini
+python -m cProfile -o RBM2.profile src/RBM2.py Config/config.ini

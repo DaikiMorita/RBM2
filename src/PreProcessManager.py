@@ -23,7 +23,7 @@ class PreProcessManager(object):
         :return: normalized data_array
         """
 
-        data_original = np.array(data_array)
+        data_original = np.array(data_array, dtype=np.float32)
 
         average = np.sum(data_original, axis=1) / data_original.shape[1]
 
@@ -34,7 +34,7 @@ class PreProcessManager(object):
 
         data_array = np.array([d / s for d, s in zip(data_minus_average, sigma)])
 
-        return data_array.tolist()
+        return data_array
 
     def make_mini_batch(self, data_array, mini_batch_size):
         """

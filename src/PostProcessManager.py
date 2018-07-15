@@ -111,6 +111,15 @@ class PostProcessManager(object):
             self.viewer.display_message(
                 "array_to_image Error: array should be at most 3-d.\n")
 
+    def re_construction(self, x, w, b, c, sigma, h=np.array([]), random=True):
+
+        if random:
+            p_h_1 = 1 / (1 + np.exp(-c - (np.dot(x / (sigma * sigma), np.transpose(w)))))
+            h = np.fmax(np.sign(p_h_1 - np.random.rand(p_h_1.shape[0], p_h_1.shape[1])),
+                        np.zeros((p_h_1.shape[0], p_h_1.shape[1])))
+
+        return sigma * np.random.randn(h.shape[0], w.shape[1]) + b + np.dot(h, w)
+
     def save_numpy_array(self, array, filename, *, path=''):
         """
 

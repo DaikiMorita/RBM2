@@ -387,17 +387,17 @@ class GaussianBernoulliRBM(object):
         return np.fmax(np.sign(P_H_1 - np.random.rand(P_H_1.shape[0], P_H_1.shape[1])),
                        np.zeros((P_H_1.shape[0], P_H_1.shape[1])))
 
-    def __sampling_x_h(self, H, W, B, Sigma):
+    def __sampling_x_h(self, H, W, B, sigma):
         """
         Gets samples of X following Gaussian distribution when given H
         :param H: values of hidden (dim: num data * num hidden)
         :param W: weight (dim num hidden * num visible)
         :param B: biases of visible (dim: num data * num visible)
-        :param Sigma: scalar or numpy array (dim 1 * visible units)
+        :param sigma: scalar or numpy array (dim 1 * visible units)
         :return: numpy array (dim: num data * num visible)
         """
 
-        return Sigma * np.random.randn(H.shape[0], W.shape[1]) + B + np.dot(H, W)
+        return sigma * np.random.randn(H.shape[0], W.shape[1]) + B + np.dot(H, W)
 
     def __cd_c(self, P_H_1_X, P_H_1_X_k):
         """

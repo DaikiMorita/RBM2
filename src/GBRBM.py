@@ -87,7 +87,7 @@ class GaussianBernoulliRBM(object):
                            "weight_decay_rate": weight_decay_rate,
                            "sparse_regularization_target": sparse_regularization_target,
                            "sparse_regularization_rate": sparse_regularization_rate,
-                           "Sigma_fix": sigma_fix}
+                           "sigma_fix": sigma_fix}
 
         X_k = np.array((mini_batch_size, self.__num_v_unit))
 
